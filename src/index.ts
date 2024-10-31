@@ -33,51 +33,117 @@ const notion: Client = new Client({ auth: process.env.NOTION_SECRET });
 //         return true;
 //     }
 // };
+type StateCode = string;
+type StateName = string;
+type State = {
+    state_code: StateCode;
+    state_name: StateName;
+};
 
-const notionSelect = async () => {
-    // const notionDbId = process.env.NOTION_DB_ID || '';
+const fetchStateData = async () => {
+    const response = await fetch(
+        'https://d1wvu1ls1c540u.cloudfront.net/api/v1/getState'
+    );
+    const data = await response.json();
+
+    return data.states as State[];
+};
+
+const getStateName = (state: State) => {
+    return state.state_name;
+};
+
+const getStateCode = (state: State) => {
+    return state.state_code;
+};
+
+const convertToNotionSelectPropertyName = (name: string) => {
+    return { name };
+};
+
+// const notionSelect = async () => {
+//     try {
+//         const states = data.states;
+
+//         const stateCodes = states.map((state) => {
+//             return state.state_code;
+//         });
+
+//         const stateNames = states.map((state) => {
+//             return state.state_name;
+//         });
+
+//         const stateNameOptions = stateNames.map((stateName) => {
+//             return {
+//                 name: stateName,
+//             };
+//         });
+//         const stateCodeOptions = stateCodes.map((stateCode) => {
+//             return {
+//                 name: stateCode,
+//             };
+//         });
+
+//         const notionResponse = await notion.databases.create({
+//             parent: {
+//                 type: 'page_id',
+//                 page_id: '12ff2544a36b805f9005de17713945a5',
+//             },
+//             title: [
+//                 {
+//                     type: 'text',
+//                     text: {
+//                         content: 'States',
+//                         link: null,
+//                     },
+//                 },
+//             ],
+//             properties: {
+//                 Name: {
+//                     title: {},
+//                 },
+//                 State_Codes: {
+//                     select: {
+//                         options: stateCodeOptions,
+//                     },
+//                 },
+//                 State_Names: {
+//                     select: {
+//                         options: stateNameOptions,
+//                     },
+//                 },
+//             },
+//         });
+
+//         console.log(notionResponse);
+//     } catch (error) {
+//         console.log(error);
+//     }
+// };
+
+const notionUpdate = async () => {
+    const notionDbId = process.env.NOTION_DB_ID || '';
 
     try {
-        const response = await fetch(
-            'https://d1wvu1ls1c540u.cloudfront.net/api/v1/getState'
+        const states = await fetchStateData();
+        console.log(states);
+
+        const stateNames = states.map(getStateName);
+
+        const stateCodes = states.map(getStateCode);
+
+        const stateNameOptions = stateNames.map(
+            convertToNotionSelectPropertyName
         );
-        const data = await response.json();
 
-        const states = data.states;
+        const stateCodeOptions = stateCodes.map(
+            convertToNotionSelectPropertyName
+        );
 
-        const stateCodes = states.map((state) => {
-            return state.state_code;
-        });
+        console.log(stateCodeOptions);
 
-        const stateNames = states.map((state) => {
-            return state.state_name;
-        });
-
-        const stateNameOptions = stateNames.map((stateName) => {
-            return {
-                name: stateName,
-            };
-        });
-        const stateCodeOptions = stateCodes.map((stateCode) => {
-            return {
-                name: stateCode,
-            };
-        });
-
-        const notionResponse = await notion.databases.create({
-            parent: {
-                type: 'page_id',
-                page_id: '12ff2544a36b805f9005de17713945a5',
-            },
-            title: [
-                {
-                    type: 'text',
-                    text: {
-                        content: 'States',
-                        link: null,
-                    },
-                },
-            ],
+        const notionResponse = await notion.databases.update({
+            database_id: notionDbId,
             properties: {
                 Name: {
                     title: {},
@@ -89,6 +155,11 @@ const notionSelect = async () => {
                 },
                 State_Names: {
                     select: {
+                        options: [...stateNameOptions, { name: 'Phantom' }],
+                    },
+                },
+                State_Name: {
+                    multi_select: {
                         options: stateNameOptions,
                     },
                 },
@@ -174,6 +245,7 @@ const onListening = () => {
 
 httpServer.on('listening', onListening).on('error', onError);
 
-notionSelect();
+// notionSelect();
+notionUpdate();
 
 // setInterval(notionPoll, 5000);
